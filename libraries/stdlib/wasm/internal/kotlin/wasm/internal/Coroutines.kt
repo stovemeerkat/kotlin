@@ -71,3 +71,36 @@ internal fun <R, P, T> startCoroutineUninterceptedOrReturnIntrinsic2(
 internal val EmptyContinuation = Continuation<Any?>(EmptyCoroutineContext) { result ->
     result.getOrThrow()
 }
+
+@Suppress("UNUSED_PARAMETER")
+internal fun jspiResumeCoroutine(result: Any, jspiCoroutineCall: JSPICoroutineExternref) {
+    implementedAsIntrinsic
+}
+
+@Suppress("UNUSED_PARAMETER")
+internal fun jspiSuspendCoroutine(jspiCoroutineCall: JSPICoroutineExternref): Any {
+    implementedAsIntrinsic
+}
+
+@Suppress("UNUSED_PARAMETER")
+internal fun <T> jspiStartCoroutine0(f: (suspend () -> T), completion: Continuation<T>) {
+    implementedAsIntrinsic
+}
+
+@Suppress("UNUSED_PARAMETER")
+internal fun <R, T> jspiStartCoroutine1(f: (suspend R.() -> T), receiver: R, completion: Continuation<T>) {
+    implementedAsIntrinsic
+}
+
+@Suppress("UNUSED_PARAMETER")
+internal fun <R, P, T> jspiStartCoroutine2(f: (suspend R.(P) -> T), receiver: R, param: P, completion: Continuation<T>) {
+    implementedAsIntrinsic
+}
+
+internal external class JSPICoroutineExternref {}
+
+class JSPICoroutine<T> private constructor(private val jsObject: JSPICoroutineExternref) {
+    fun resumeWith(result: Result<T>) {
+        jspiResumeCoroutine(result, jsObject)
+    }
+}

@@ -83,6 +83,8 @@ interface IrDeclarationOrigin {
 
     object FIELD_FOR_OUTER_THIS : IrDeclarationOriginImpl("FIELD_FOR_OUTER_THIS", isSynthetic = true)
     object CONTINUATION : IrDeclarationOriginImpl("CONTINUATION", isSynthetic = true)
+    object JSPI_PARAMETER : IrDeclarationOriginImpl("JSPI_PARAMETER", isSynthetic = true)
+    object JSPI_SUSPEND_RESULT : IrDeclarationOriginImpl("JSPI_SUSPEND_RESULT", isSynthetic = true)
     object LOWERED_SUSPEND_FUNCTION : IrDeclarationOriginImpl("LOWERED_SUSPEND_FUNCTION", isSynthetic = true)
 
     object SHARED_VARIABLE_IN_EVALUATOR_FRAGMENT : IrDeclarationOriginImpl("SHARED_VARIABLE_IN_EVALUATOR_FRAGMENT", isSynthetic = true)
