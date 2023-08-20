@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.ir.backend.js.utils.MutableReference
 import org.jetbrains.kotlin.ir.declarations.*
 import java.util.WeakHashMap
 
-class JsMapping : DefaultMapping() {
+open class JsMapping : DefaultMapping() {
     val classToItsDefaultConstructor = WeakHashMap<IrClass, IrConstructor>()
 
     val esClassWhichNeedBoxParameters = DefaultDelegateFactory.newDeclarationToValueMapping<IrClass, Boolean>()

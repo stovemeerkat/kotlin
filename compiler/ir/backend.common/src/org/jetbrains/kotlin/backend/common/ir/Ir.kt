@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.lower.LocalDeclarationsLowering
 import org.jetbrains.kotlin.builtins.PrimitiveType
 import org.jetbrains.kotlin.builtins.StandardNames
+import org.jetbrains.kotlin.builtins.StandardNames.COROUTINES_INTRINSICS_PACKAGE_FQ_NAME
 import org.jetbrains.kotlin.builtins.StandardNames.KOTLIN_REFLECT_FQ_NAME
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
@@ -256,6 +257,13 @@ abstract class Symbols(
                 function.name.asString() == "typeOf" &&
                         function.valueParameters.isEmpty() &&
                         (function.parent as? IrPackageFragment)?.packageFqName == KOTLIN_REFLECT_FQ_NAME
+            }
+
+        fun isSuspendCoroutineIntrinsic(symbol: IrFunctionSymbol): Boolean =
+            symbol is IrSimpleFunctionSymbol && symbol.owner.let { function ->
+                function.name.asString() == "suspendCoroutineUninterceptedOrReturn" &&
+                        //function.valueParameters.isEmpty() &&
+                        (function.parent as? IrPackageFragment)?.packageFqName == COROUTINES_INTRINSICS_PACKAGE_FQ_NAME
             }
     }
 }

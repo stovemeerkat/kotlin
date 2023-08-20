@@ -111,6 +111,11 @@ class WasmSymbols(
     override val returnIfSuspended =
         getInternalFunction("returnIfSuspended")
 
+    val jspiSuspendCoroutine =
+        getInternalFunction("jspiSuspendCoroutine")
+    val jspiResumeCoroutine =
+        getInternalFunction("jspiResumeCoroutine")
+
     val enumEntries = getIrClass(FqName.fromSegments(listOf("kotlin", "enums", "EnumEntries")))
     val createEnumEntries = findFunctions(enumsInternalPackage.memberScope, Name.identifier("enumEntries"))
         .find { it.valueParameters.firstOrNull()?.type?.isFunctionType == false }

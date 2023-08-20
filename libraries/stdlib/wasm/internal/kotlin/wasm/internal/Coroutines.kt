@@ -71,3 +71,13 @@ internal fun <R, P, T> startCoroutineUninterceptedOrReturnIntrinsic2(
 internal val EmptyContinuation = Continuation<Any?>(EmptyCoroutineContext) { result ->
     result.getOrThrow()
 }
+
+@Suppress("UNUSED_PARAMETER")
+internal fun jspiResumeCoroutine(result: Result<Any>, jspiCoroutineCall: Any, jspiSuspender: Any) {
+    implementedAsIntrinsic
+}
+
+@Suppress("UNUSED_PARAMETER")
+internal fun jspiSuspendCoroutine(jspiCoroutineCall: Any, jspiSuspender: Any): Any {
+    implementedAsIntrinsic
+}

@@ -47,6 +47,7 @@ interface InlineFunctionResolver {
     fun getFunctionSymbol(irFunction: IrFunction): IrFunctionSymbol
     fun shouldExcludeFunctionFromInlining(symbol: IrFunctionSymbol): Boolean {
         return Symbols.isLateinitIsInitializedPropertyGetter(symbol) || Symbols.isTypeOfIntrinsic(symbol)
+                || Symbols.isSuspendCoroutineIntrinsic(symbol)
     }
 }
 

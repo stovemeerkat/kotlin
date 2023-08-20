@@ -56,7 +56,7 @@ class WasmBackendContext(
         )
     }
 
-    override val mapping = JsMapping()
+    override val mapping = WasmMapping()
 
     val closureCallExports = mutableMapOf<String, IrSimpleFunction>()
     val kotlinClosureToJsConverters = mutableMapOf<String, IrSimpleFunction>()

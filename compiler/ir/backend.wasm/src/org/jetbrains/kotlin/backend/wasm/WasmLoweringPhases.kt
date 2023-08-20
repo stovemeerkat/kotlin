@@ -363,6 +363,33 @@ private val suspendFunctionsLoweringPhase = makeWasmModulePhase(
     description = "Transform suspend functions into CoroutineImpl instance and build state machine"
 )
 
+private val addJSPIParamsToNonLocalSuspendFunctionsLowering = makeWasmModulePhase(
+    ::AddJSPIParamsToNonLocalSuspendFunctionsLowering,
+    name = "AddJSPIParamsToNonLocalSuspendFunctionsLowering",
+    description = "Add two explicit JSPI parameters as last parameters of suspend functions",
+)
+
+private val addJSPIParamsToFunctionCallsLowering = makeWasmModulePhase(
+    ::AddJSPIParamsToFunctionCallsLowering,
+    name = "AddJSPIParamsToFunctionCallsLowering",
+    description = "Replace suspend function calls with calls with JSPI parameters",
+    prerequisite = setOf(addJSPIParamsToNonLocalSuspendFunctionsLowering),
+)
+
+private val suspendCoroutineBuiltinLowering = makeWasmModulePhase(
+    ::SuspendCoroutineBuiltinLowering,
+    name = "SuspendCoroutineBuiltinLowering",
+    description = "Replace calls to 'suspendCoroutineUninterceptedOrReturn' with appropriate JSPI code",
+    prerequisite = setOf(addJSPIParamsToNonLocalSuspendFunctionsLowering),
+)
+
+private val continuationResumeLowering = makeWasmModulePhase(
+    ::ContinuationResumeLowering,
+    name = "ContinuationResumeLowering",
+    description = "Replace calls to Continuation.resume with JSPI intrinsic calls",
+    prerequisite = setOf(addJSPIParamsToNonLocalSuspendFunctionsLowering),
+)
+
 private val addContinuationToNonLocalSuspendFunctionsLoweringPhase = makeWasmModulePhase(
     ::AddContinuationToNonLocalSuspendFunctionsLowering,
     name = "AddContinuationToNonLocalSuspendFunctionsLowering",
@@ -684,12 +711,16 @@ val wasmPhases = SameTypeNamedCompilerPhase(
             enumUsageLoweringPhase then
             enumEntryRemovalLoweringPhase then
 
-            suspendFunctionsLoweringPhase then
+            //suspendFunctionsLoweringPhase then
             initializersLoweringPhase then
             initializersCleanupLoweringPhase then
 
-            addContinuationToNonLocalSuspendFunctionsLoweringPhase then
-            addContinuationToFunctionCallsLoweringPhase then
+            addJSPIParamsToNonLocalSuspendFunctionsLowering then
+            addJSPIParamsToFunctionCallsLowering then
+            suspendCoroutineBuiltinLowering then
+            continuationResumeLowering then
+            //addContinuationToNonLocalSuspendFunctionsLoweringPhase then
+            //addContinuationToFunctionCallsLoweringPhase then
             addMainFunctionCallsLowering then
 
             unhandledExceptionLowering then
