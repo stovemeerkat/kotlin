@@ -255,7 +255,7 @@ class BodyGenerator(
             // Handle cases when IrClass::thisReceiver is referenced instead
             // of the value parameter of current function
             if (valueDeclaration.isDispatchReceiver)
-                functionContext.referenceLocal(0)
+                functionContext.referenceLocal(1)   // index 0 is jspiSuspender, 1 is dispatchReceiver
             else
                 functionContext.referenceLocal(valueSymbol),
             expression.getSourceLocation()
@@ -271,6 +271,7 @@ class BodyGenerator(
     }
 
     override fun visitCall(expression: IrCall) {
+        body.buildGetLocal(functionContext.jspiSuspenderLocal, expression.getSourceLocation())
         generateCall(expression)
     }
 
@@ -307,6 +308,7 @@ class BodyGenerator(
             return
         }
 
+        body.buildGetLocal(functionContext.jspiSuspenderLocal, location)
         body.buildRefNull(WasmHeapType.Simple.None, location) // this = null
         generateCall(expression)
     }
@@ -359,7 +361,8 @@ class BodyGenerator(
             return
         }
 
-        body.buildGetLocal(functionContext.referenceLocal(0), SourceLocation.NoLocation("Get implicit dispatch receiver")) // this parameter
+        body.buildGetLocal(functionContext.jspiSuspenderLocal, expression.getSourceLocation())
+        body.buildGetLocal(functionContext.referenceLocal(1), SourceLocation.NoLocation("Get implicit dispatch receiver")) // this parameter
         generateCall(expression)
     }
 

@@ -88,6 +88,21 @@ class DeclarationGenerator(
                 context.addJsFun(jsCodeName, jsCode)
                 WasmImportDescriptor("js_code", jsCodeName)
             }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiSuspendCoroutine" -> {
+                WasmImportDescriptor("jspi", "suspendCoroutine")
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiResumeCoroutine" -> {
+                WasmImportDescriptor("jspi", "resumeCoroutine")
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine0" -> {
+                WasmImportDescriptor("jspi", "startCoroutine0")
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine1" -> {
+                WasmImportDescriptor("jspi", "startCoroutine1")
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine2" -> {
+                WasmImportDescriptor("jspi", "startCoroutine2")
+            }
             else -> {
                 null
             }
@@ -107,7 +122,7 @@ class DeclarationGenerator(
 
         val wasmFunctionType =
             WasmFunctionType(
-                parameterTypes = irParameters.map { context.transformValueParameterType(it) },
+                parameterTypes = listOf(WasmExternRef) + irParameters.map { context.transformValueParameterType(it) },
                 resultTypes = listOfNotNull(resultType)
             )
         context.defineFunctionType(declaration.symbol, wasmFunctionType)
@@ -139,6 +154,8 @@ class DeclarationGenerator(
             backendContext,
             context
         )
+
+        function.locals += functionCodegenContext.jspiSuspenderLocal
 
         for (irParameter in irParameters) {
             functionCodegenContext.defineLocal(irParameter.symbol)

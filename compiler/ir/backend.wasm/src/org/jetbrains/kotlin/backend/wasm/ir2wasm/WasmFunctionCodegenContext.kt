@@ -29,6 +29,8 @@ class WasmFunctionCodegenContext(
     val tagIdx: Int
         get() = 0
 
+    val jspiSuspenderLocal = WasmLocal(0, "\$jspiSuspender", WasmExternRef, true)
+
     private val wasmLocals = LinkedHashMap<IrValueSymbol, WasmLocal>()
     private val wasmSyntheticLocals = LinkedHashMap<SyntheticLocalType, WasmLocal>()
     private val loopLevels = LinkedHashMap<Pair<IrLoop, LoopLabelType>, Int>()
