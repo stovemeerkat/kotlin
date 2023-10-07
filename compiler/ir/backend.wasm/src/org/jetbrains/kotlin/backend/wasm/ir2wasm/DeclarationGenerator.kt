@@ -201,6 +201,8 @@ class DeclarationGenerator(
 
         val nameIfExported = when {
             declaration.isJsExport() -> declaration.getJsNameOrKotlinName().identifier
+            declaration.isJSPIExport() -> declaration.fqNameWhenAvailable?.asString()
+                ?: throw RuntimeException("Fully qualified name unavailable for function $declaration.name")
             else -> declaration.getWasmExportNameIfWasmExport()
         }
 
@@ -521,8 +523,13 @@ fun IrFunction.getEffectiveValueParameters(): List<IrValueParameter> {
     return listOfNotNull(implicitThis, dispatchReceiverParameter, extensionReceiverParameter) + valueParameters
 }
 
+fun IrFunction.isJSPIExport(): Boolean =
+    fqNameWhenAvailable.let {
+        it !== null && it.asString().startsWith("kotlin.wasm.internal.jspiCallWasmFunction")
+    }
+
 fun IrFunction.isExported(): Boolean =
-    isJsExport() || getWasmExportNameIfWasmExport() != null
+    isJsExport() || getWasmExportNameIfWasmExport() != null || isJSPIExport()
 
 fun generateConstExpression(
     expression: IrConst<*>,

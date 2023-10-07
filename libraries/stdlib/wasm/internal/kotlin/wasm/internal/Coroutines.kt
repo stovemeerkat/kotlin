@@ -97,6 +97,18 @@ internal fun <R, P, T> jspiStartCoroutine2(f: (suspend R.(P) -> T), receiver: R,
     implementedAsIntrinsic
 }
 
+internal suspend fun <T> jspiCallWasmFunction0(f: (suspend () -> T)): T {
+    return f()
+}
+
+internal suspend fun <R, T> jspiCallWasmFunction1(f: (suspend R.() -> T), receiver: R): T {
+    return receiver.f()
+}
+
+internal suspend fun <R, P, T> jspiCallWasmFunction2(f: (suspend R.(P) -> T), receiver: R, param: P): T {
+    return receiver.f(param)
+}
+
 internal external class JSPICoroutineExternref {}
 
 class JSPICoroutine<T> private constructor(private val jsObject: JSPICoroutineExternref) {

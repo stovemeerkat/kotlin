@@ -116,6 +116,8 @@ class WasmSymbols(
     val jspiResumeCoroutine = getInternalFunction("jspiResumeCoroutine")
     val jspiStartCoroutineIntrinsics =
         (0..2).map { getInternalFunction("jspiStartCoroutine$it") }
+    val jspiCallWasmFunctionIntrinsics =
+        (0..2).map { getInternalFunction("jspiCallWasmFunction$it") }
 
     val enumEntries = getIrClass(FqName.fromSegments(listOf("kotlin", "enums", "EnumEntries")))
     val createEnumEntries = findFunctions(enumsInternalPackage.memberScope, Name.identifier("enumEntries"))
