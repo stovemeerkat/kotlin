@@ -179,7 +179,7 @@ class DeclarationGenerator(
         // variables on constructor call sites.
         // TODO: Redesign construction scheme.
         if (declaration is IrConstructor) {
-            exprGen.buildGetLocal(/*implicit this*/ function.locals[0], SourceLocation.NoLocation("Get implicit dispatch receiver"))
+            exprGen.buildGetLocal(/*implicit this*/ function.locals[1], SourceLocation.NoLocation("Get implicit dispatch receiver"))
             exprGen.buildInstr(WasmOp.RETURN, SourceLocation.NoLocation("Implicit return from constructor"))
         }
 
@@ -555,6 +555,7 @@ fun generateConstExpression(
             val stringValue = kind.valueOf(expression)
             val (literalAddress, literalPoolId) = context.referenceStringLiteralAddressAndId(stringValue)
             body.commentGroupStart { "const string: \"$stringValue\"" }
+            body.buildRefNull(WasmHeapType.Simple.Extern, location)
             body.buildConstI32Symbol(literalPoolId, location)
             body.buildConstI32Symbol(literalAddress, location)
             body.buildConstI32(stringValue.length, location)

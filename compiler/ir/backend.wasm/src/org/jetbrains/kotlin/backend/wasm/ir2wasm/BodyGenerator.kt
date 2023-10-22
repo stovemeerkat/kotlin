@@ -271,7 +271,9 @@ class BodyGenerator(
     }
 
     override fun visitCall(expression: IrCall) {
-        body.buildGetLocal(functionContext.jspiSuspenderLocal, expression.getSourceLocation())
+        if (expression.symbol != wasmSymbols.boxIntrinsic) {
+            body.buildGetLocal(functionContext.jspiSuspenderLocal, expression.getSourceLocation())
+        }
         generateCall(expression)
     }
 
@@ -610,7 +612,7 @@ class BodyGenerator(
 
             wasmSymbols.returnArgumentIfItIsKotlinAny -> {
                 body.buildBlock("returnIfAny") { innerLabel ->
-                    body.buildGetLocal(functionContext.referenceLocal(0), location)
+                    body.buildGetLocal(functionContext.referenceLocal(1), location)
                     body.buildInstr(WasmOp.EXTERN_INTERNALIZE, location)
 
                     val tmpLocal = functionContext.referenceLocal(SyntheticLocalType.TMP_FOR_BR_ON_CAST_EMULATION)
@@ -723,7 +725,7 @@ class BodyGenerator(
         }
 
         if (functionContext.irFunction is IrConstructor) {
-            body.buildGetLocal(functionContext.referenceLocal(0), SourceLocation.NoLocation("Get implicit dispatch receiver"))
+            body.buildGetLocal(functionContext.referenceLocal(1), SourceLocation.NoLocation("Get implicit dispatch receiver"))
         }
 
         body.buildInstr(WasmOp.RETURN, expression.getSourceLocation())
