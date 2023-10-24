@@ -68,7 +68,7 @@ class BodyGenerator(
     }
 
     private fun generateStatement(statement: IrStatement) {
-        when(statement) {
+        when (statement) {
             is IrExpression -> generateAsStatement(statement)
             is IrVariable -> statement.acceptVoid(this)
             else -> error("Unsupported node type: ${statement::class.simpleName}")
@@ -209,7 +209,8 @@ class BodyGenerator(
 
             irBuiltIns.booleanType,
             irBuiltIns.byteType,
-            irBuiltIns.shortType ->
+            irBuiltIns.shortType,
+            ->
                 WasmOp.STRUCT_GET_S
 
             else -> WasmOp.STRUCT_GET
@@ -271,7 +272,7 @@ class BodyGenerator(
     }
 
     override fun visitCall(expression: IrCall) {
-        if (expression.symbol != wasmSymbols.boxIntrinsic) {
+        if (expression.requiresJSPIParameter()) {
             body.buildGetLocal(functionContext.jspiSuspenderLocal, expression.getSourceLocation())
         }
         generateCall(expression)
@@ -523,7 +524,7 @@ class BodyGenerator(
     // Assumes call arguments are already on the stack
     private fun tryToGenerateIntrinsicCall(
         call: IrFunctionAccessExpression,
-        function: IrFunction
+        function: IrFunction,
     ): Boolean {
         if (tryToGenerateWasmOpIntrinsicCall(call, function)) {
             return true
@@ -989,4 +990,18 @@ class BodyGenerator(
     }
 
     private fun IrElement.getSourceLocation() = getSourceLocation(functionContext.irFunction.fileOrNull?.fileEntry)
+
+    private fun IrCall.requiresJSPIParameter(): Boolean {
+        val function = symbol.owner
+        if (function.hasWasmNoOpCastAnnotation() || function.getWasmOpAnnotation() != null) {
+            return false
+        }
+        return with(wasmSymbols) {
+            when (symbol) {
+                wasmTypeId, wasmIsInterface, refCastNull, refTest, unboxIntrinsic, boxIntrinsic, unsafeGetScratchRawMemory, returnArgumentIfItIsKotlinAny, wasmArrayCopy, stringGetPoolSize, wasmArrayNewData0, rangeCheck -> false
+                in assertFuncs -> false
+                else -> true
+            }
+        }
+    }
 }
