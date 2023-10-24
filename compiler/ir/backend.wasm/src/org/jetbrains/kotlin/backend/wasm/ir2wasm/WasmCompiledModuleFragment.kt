@@ -178,11 +178,13 @@ class WasmCompiledModuleFragment(
             }
         }
 
-        val masterInitFunctionType = WasmFunctionType(emptyList(), emptyList())
+        val masterInitFunctionType = WasmFunctionType(listOf(WasmExternRef), emptyList())
         val masterInitFunction = WasmFunction.Defined("_initialize", WasmSymbol(masterInitFunctionType))
         with(WasmIrExpressionBuilder(masterInitFunction.instructions)) {
+            val location = SourceLocation.NoLocation(("Generated service code"))
             initFunctions.sortedBy { it.priority }.forEach {
-                buildCall(WasmSymbol(it.function), SourceLocation.NoLocation("Generated service code"))
+                buildGetLocal(WasmLocal(0, "\$jspiSuspender", WasmExternRef, true), location)
+                buildCall(WasmSymbol(it.function), location)
             }
         }
         exports += WasmExport.Function("_initialize", masterInitFunction)
