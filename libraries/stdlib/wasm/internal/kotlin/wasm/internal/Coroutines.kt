@@ -97,16 +97,19 @@ internal fun <R, P, T> jspiStartCoroutine2(f: (suspend R.(P) -> T), receiver: R,
     implementedAsIntrinsic
 }
 
+@Suppress("UNUSED_PARAMETER")
 internal suspend fun <T> jspiCallWasmFunction0(f: (suspend () -> T)): T {
-    return f()
+    implementedAsIntrinsic
 }
 
-internal suspend fun <R, T> jspiCallWasmFunction1(f: (suspend R.() -> T), receiver: R): T {
-    return receiver.f()
+@Suppress("UNUSED_PARAMETER")
+internal suspend fun <R, T> jspiCallWasmFunction1(f: (suspend R.() -> T), receiver: R, continuation: Any): T {
+    implementedAsIntrinsic
 }
 
+@Suppress("UNUSED_PARAMETER")
 internal suspend fun <R, P, T> jspiCallWasmFunction2(f: (suspend R.(P) -> T), receiver: R, param: P): T {
-    return receiver.f(param)
+    implementedAsIntrinsic
 }
 
 internal external class JSPICoroutineExternref {}

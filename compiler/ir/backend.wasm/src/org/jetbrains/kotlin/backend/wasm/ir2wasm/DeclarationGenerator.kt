@@ -108,6 +108,24 @@ class DeclarationGenerator(
             }
         }
 
+        val importedType = when {
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiSuspendCoroutine" -> {
+                WasmFunctionType(listOf(WasmExternRef, WasmExternRef), listOf(WasmStructRef))
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine0" -> {
+                WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef), emptyList())
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine1" -> {
+                WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef, WasmStructRef), emptyList())
+            }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine2" -> {
+                WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef, WasmStructRef, WasmStructRef), emptyList())
+            }
+            else -> {
+                null
+            }
+        }
+
         if (declaration.isFakeOverride)
             return
 
@@ -121,7 +139,7 @@ class DeclarationGenerator(
         }
 
         val wasmFunctionType =
-            WasmFunctionType(
+            importedType ?: WasmFunctionType(
                 parameterTypes = listOf(WasmExternRef) + irParameters.map { context.transformValueParameterType(it) },
                 resultTypes = listOfNotNull(resultType)
             )

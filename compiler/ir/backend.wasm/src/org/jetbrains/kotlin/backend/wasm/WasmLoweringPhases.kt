@@ -376,6 +376,13 @@ private val addJSPIParamsToFunctionCallsLowering = makeWasmModulePhase(
     prerequisite = setOf(addJSPIParamsToNonLocalSuspendFunctionsLowering),
 )
 
+private val jspiCallWasmFunctionExportsLowering = makeWasmModulePhase(
+    ::JSPICallWasmFunctionExportsLowering,
+    name = "JSPICallWasmFunctionsExportsLowering",
+    description = "Add implementation to jspiCallWasmFunction exports",
+    prerequisite = setOf(addJSPIParamsToNonLocalSuspendFunctionsLowering),
+)
+
 private val suspendCoroutineBuiltinLowering = makeWasmModulePhase(
     ::SuspendCoroutineBuiltinLowering,
     name = "SuspendCoroutineBuiltinLowering",
@@ -710,6 +717,7 @@ val wasmPhases = SameTypeNamedCompilerPhase(
 
             addJSPIParamsToNonLocalSuspendFunctionsLowering then
             addJSPIParamsToFunctionCallsLowering then
+            jspiCallWasmFunctionExportsLowering then
             suspendCoroutineBuiltinLowering then
             //addContinuationToNonLocalSuspendFunctionsLoweringPhase then
             //addContinuationToFunctionCallsLoweringPhase then
