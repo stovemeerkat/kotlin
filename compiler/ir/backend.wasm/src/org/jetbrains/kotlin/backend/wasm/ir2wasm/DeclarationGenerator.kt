@@ -121,6 +121,9 @@ class DeclarationGenerator(
             declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine2" -> {
                 WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef, WasmStructRef, WasmStructRef), emptyList())
             }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiCallWasmFunction0" -> {
+                WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef), emptyList())
+            }
             else -> {
                 null
             }

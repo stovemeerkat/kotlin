@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.impl.IrExpressionBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.types.classOrFail
+import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.getSimpleFunction
 
@@ -30,8 +31,8 @@ class JSPICallWasmFunctionExportsLowering(val context: WasmBackendContext) : Dec
             return null
         }
         declaration.body = generateFunctionBody(arity, declaration)
-        val continuationParameter = declaration.valueParameters[declaration.valueParameters.size - 1]
-        continuationParameter.type = context.wasmSymbols.wasmStructRefType
+        declaration.valueParameters[0].type = context.wasmSymbols.wasmStructRefType
+        declaration.valueParameters[declaration.valueParameters.size - 1].type = context.wasmSymbols.wasmStructRefType
         return null
     }
 
@@ -48,24 +49,55 @@ class JSPICallWasmFunctionExportsLowering(val context: WasmBackendContext) : Dec
         val builder = context.createIrBuilder(function.symbol, function.startOffset, function.endOffset)
         val functionParameter = function.valueParameters[0]
         val continuationParameter = function.valueParameters[function.valueParameters.size - 1]
-        val cast = IrTypeOperatorCallImpl(
+
+        val functionAnyCast = builder.irCall(context.wasmSymbols.refCastNull, type = context.wasmSymbols.any.defaultType).apply {
+            putTypeArgument(0, context.wasmSymbols.any.defaultType)
+            putValueArgument(0, builder.irGet(context.wasmSymbols.wasmStructRefType, functionParameter.symbol))
+        }
+        /*val functionAnyCast = IrTypeOperatorCallImpl(
+            function.startOffset,
+            function.endOffset,
+            context.wasmSymbols.any.defaultType,
+            IrTypeOperator.CAST,
+            context.wasmSymbols.any.defaultType,
+            builder.irGet(context.wasmSymbols.wasmStructRefType, functionParameter.symbol),
+        )*/
+        val functionInterfaceCast = IrTypeOperatorCallImpl(
+            function.startOffset,
+            function.endOffset,
+            functionParameter.type,
+            IrTypeOperator.CAST,
+            functionParameter.type,
+            functionAnyCast,
+        )
+        val continuationCast = IrTypeOperatorCallImpl(
             function.startOffset,
             function.endOffset,
             continuationParameter.type,
             IrTypeOperator.CAST,
             continuationParameter.type,
-            builder.irGet(continuationParameter),
+            builder.irGet(context.wasmSymbols.wasmStructRefType, continuationParameter.symbol),
         )
         val invokeSymbol = functionParameter.type.classOrFail.getSimpleFunction("invoke")
             ?: throw RuntimeException("${function.name} called with function argument that does not have an 'invoke' method")
         val call = builder.irCall(invokeSymbol).apply {
-            dispatchReceiver = builder.irGet(functionParameter)
+            dispatchReceiver = functionInterfaceCast
             for (i in 0..<arity) {
                 putValueArgument(i, builder.irGet(function.valueParameters[i + 1]))
             }
-            putValueArgument(arity, cast)
+            putValueArgument(arity, continuationCast)
         }
         return IrExpressionBodyImpl(call)
     }
-
 }
+
+/*private fun DeclarationIrBuilder.buildTypeCast(function: IrSimpleFunction, toType: IrType, expression: IrExpression): IrTypeOperatorCall {
+    return IrTypeOperatorCallImpl(
+        function.startOffset,
+        function.endOffset,
+        toType,
+        IrTypeOperator.CAST,
+        toType,
+        expression,
+    )
+}*/

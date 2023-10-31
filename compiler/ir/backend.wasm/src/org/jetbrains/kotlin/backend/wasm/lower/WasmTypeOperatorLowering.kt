@@ -265,7 +265,11 @@ class WasmBaseTypeOperatorTransformer(val context: WasmBackendContext) : IrEleme
         val toType = expression.typeOperand
         val fromType = expression.argument.type
 
-        if (fromType.eraseToClassOrInterface.isSubclassOf(expression.type.eraseToClassOrInterface)) {
+        /*if (isCurrentFunctionJSPIIntrinsic() && fromType == context.wasmSymbols.wasmStructRefType) {
+            throw RuntimeException("From: ${fromType.eraseToClassOrInterface.name}; expression: ${expression.type.eraseToClassOrInterface.name}; subclass: ${fromType.eraseToClassOrInterface.isSubclassOf(expression.type.eraseToClassOrInterface)}")
+        }*/
+
+        if (/*!isCurrentFunctionJSPIIntrinsic() && */fromType.eraseToClassOrInterface.isSubclassOf(expression.type.eraseToClassOrInterface)) {
             return narrowType(fromType, expression.type, expression.argument)
         }
 
@@ -350,6 +354,19 @@ class WasmBaseTypeOperatorTransformer(val context: WasmBackendContext) : IrEleme
                 index = 0,
                 valueArgument = narrowType(argument.type, context.irBuiltIns.anyType, argument) //TODO("Why we need it?)
             )
+        }
+    }
+
+    private fun isCurrentFunctionJSPIIntrinsic(): Boolean {
+        val scopeIrElement = currentScope?.irElement
+        if (scopeIrElement !is IrSimpleFunction) {
+            return false
+        }
+        return when (scopeIrElement.fqNameWhenAvailable?.asString()) {
+            "kotlin.wasm.internal.jspiCallWasmFunction0" -> true
+            "kotlin.wasm.internal.jspiCallWasmFunction1" -> true
+            "kotlin.wasm.internal.jspiCallWasmFunction2" -> true
+            else -> false
         }
     }
 }
