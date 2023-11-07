@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.buildVariable
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.classOrFail
+import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.getSimpleFunction
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
@@ -47,8 +48,16 @@ class SuspendCoroutineBuiltinLowering(val context: WasmBackendContext) : BodyLow
                 val builder = context.createIrBuilder(container.symbol, expression.startOffset, expression.endOffset)
                 val blockCall = buildBlockCall(expression, builder, continuationParam)
                 val suspendResult = buildSuspendResultVariable(irBody, blockCall)
-                val intrinsicCall = builder.irCall(context.wasmSymbols.jspiSuspendCoroutine).apply {
+                val intrinsicSymbol = continuationParam.type.classOrFail.getSimpleFunction("suspend")
+                    ?: throw RuntimeException("Continuation parameter of 'suspendCoroutineUninterceptedOrReturn' has no method 'suspend'")
+                /*val intrinsicSymbol = context.wasmSymbols.jspiCoroutineClass.getSimpleFunction("suspend")
+                    ?: throw RuntimeException("Internal class kotlin.wasm.internal.JSPICoroutine has no method 'suspend'")
+                */
+                /*val intrinsicCall = builder.irCall(context.wasmSymbols.jspiSuspendCoroutine).apply {
                     putValueArgument(0, builder.irGet(continuationParam))
+                }*/
+                val intrinsicCall = builder.irCall(intrinsicSymbol).apply {
+                    dispatchReceiver = builder.irGet(continuationParam)
                 }
                 val ifThenElse = builder.irIfThenElse(
                     expression.type,

@@ -112,6 +112,9 @@ class DeclarationGenerator(
             declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiSuspendCoroutine" -> {
                 WasmFunctionType(listOf(WasmExternRef, WasmExternRef), listOf(WasmStructRef))
             }
+            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiResumeCoroutine" -> {
+                WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmExternRef), emptyList())
+            }
             declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine0" -> {
                 WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef), emptyList())
             }
@@ -121,9 +124,9 @@ class DeclarationGenerator(
             declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiStartCoroutine2" -> {
                 WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef, WasmStructRef, WasmStructRef), emptyList())
             }
-            declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiCallWasmFunction0" -> {
+            /*declaration.fqNameWhenAvailable?.asString() == "kotlin.wasm.internal.jspiCallWasmFunction0" -> {
                 WasmFunctionType(listOf(WasmExternRef, WasmStructRef, WasmStructRef), emptyList())
-            }
+            }*/
             else -> {
                 null
             }

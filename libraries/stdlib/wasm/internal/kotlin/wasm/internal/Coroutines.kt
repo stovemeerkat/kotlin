@@ -8,6 +8,7 @@
 package kotlin.wasm.internal
 
 import kotlin.coroutines.*
+import kotlin.wasm.internal.reftypes.structref
 
 @PublishedApi
 @ExcludedFromCodegen
@@ -78,7 +79,7 @@ internal fun jspiResumeCoroutine(result: Any, jspiCoroutineCall: JSPICoroutineEx
 }
 
 @Suppress("UNUSED_PARAMETER")
-internal fun jspiSuspendCoroutine(jspiCoroutineCall: JSPICoroutineExternref): Any {
+internal fun jspiSuspendCoroutine(jspiCoroutineCall: JSPICoroutineExternref): structref {
     implementedAsIntrinsic
 }
 
@@ -98,24 +99,31 @@ internal fun <R, P, T> jspiStartCoroutine2(f: (suspend R.(P) -> T), receiver: R,
 }
 
 @Suppress("UNUSED_PARAMETER")
-internal suspend fun <T> jspiCallWasmFunction0(f: (suspend () -> T)): T {
+internal suspend fun <T> jspiCallWasmFunction0(f: (suspend () -> T), completion: Continuation<T>) {
     implementedAsIntrinsic
 }
 
 @Suppress("UNUSED_PARAMETER")
-internal suspend fun <R, T> jspiCallWasmFunction1(f: (suspend R.() -> T), receiver: R, continuation: Any): T {
+internal suspend fun <R, T> jspiCallWasmFunction1(f: (suspend R.() -> T), receiver: R, completion: Continuation<T>) {
     implementedAsIntrinsic
 }
 
 @Suppress("UNUSED_PARAMETER")
-internal suspend fun <R, P, T> jspiCallWasmFunction2(f: (suspend R.(P) -> T), receiver: R, param: P): T {
+internal suspend fun <R, P, T> jspiCallWasmFunction2(f: (suspend R.(P) -> T), receiver: R, param: P, completion: Continuation<T>) {
     implementedAsIntrinsic
 }
 
 internal external class JSPICoroutineExternref {}
 
-class JSPICoroutine<T> private constructor(private val jsObject: JSPICoroutineExternref) {
-    fun resumeWith(result: Result<T>) {
+class JSPICoroutine<T> private constructor(private val jsObject: JSPICoroutineExternref) : Continuation<T> {
+    override val context: CoroutineContext
+        get() = EmptyCoroutineContext
+
+    override fun resumeWith(result: Result<T>) {
         jspiResumeCoroutine(result, jsObject)
+    }
+
+    fun suspend(): Any {
+        return wasm_ref_cast_null<Any>(jspiSuspendCoroutine(jsObject))
     }
 }

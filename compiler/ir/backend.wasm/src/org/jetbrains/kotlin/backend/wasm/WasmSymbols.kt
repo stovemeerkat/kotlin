@@ -112,6 +112,7 @@ class WasmSymbols(
         getInternalFunction("returnIfSuspended")
 
     val jspiCoroutineClass = getInternalClass("JSPICoroutine")
+    val jspiCoroutineExternrefClass = getInternalClass("JSPICoroutineExternref")
     val jspiSuspendCoroutine = getInternalFunction("jspiSuspendCoroutine")
     val jspiResumeCoroutine = getInternalFunction("jspiResumeCoroutine")
     val jspiStartCoroutineIntrinsics =
