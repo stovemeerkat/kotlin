@@ -52,12 +52,14 @@ class JSPICallWasmFunctionExportsLowering(val context: WasmBackendContext) : Dec
 
     private fun generateFunctionBody(arity: Int, function: IrSimpleFunction): IrBody {
         val builder = context.createIrBuilder(function.symbol, function.startOffset, function.endOffset)
+        val anyType = context.wasmSymbols.any.defaultType
+        val structRefType = context.wasmSymbols.wasmStructRefType
         val functionParameter = function.valueParameters[0]
         val completionParameter = function.valueParameters[function.valueParameters.size - 2]
         val coroutineParameter = function.valueParameters[function.valueParameters.size - 1]
-        val functionAnyCast = builder.irCall(context.wasmSymbols.refCastNull, type = context.wasmSymbols.any.defaultType).apply {
-            putTypeArgument(0, context.wasmSymbols.any.defaultType)
-            putValueArgument(0, builder.irGet(context.wasmSymbols.wasmStructRefType, functionParameter.symbol))
+        val functionAnyCast = builder.irCall(context.wasmSymbols.refCastNull, type = anyType).apply {
+            putTypeArgument(0, anyType)
+            putValueArgument(0, builder.irGet(structRefType, functionParameter.symbol))
         }
         val functionInterfaceCast = IrTypeOperatorCallImpl(
             function.startOffset,
@@ -80,13 +82,16 @@ class JSPICallWasmFunctionExportsLowering(val context: WasmBackendContext) : Dec
         val invokeCall = builder.irCall(invokeSymbol).apply {
             dispatchReceiver = functionInterfaceCast
             for (i in 0..<arity) {
-                putValueArgument(i, builder.irGet(function.valueParameters[i + 1]))
+                putValueArgument(i, builder.irCall(context.wasmSymbols.refCastNull, type = anyType).apply {
+                    putTypeArgument(0, anyType)
+                    putValueArgument(0, builder.irGet(function.valueParameters[i + 1], type = structRefType))
+                })
             }
             putValueArgument(arity, coroutineConstructorCall)
         }
-        val completionAnyCast = builder.irCall(context.wasmSymbols.refCastNull, type = context.wasmSymbols.any.defaultType).apply {
-            putTypeArgument(0, context.wasmSymbols.any.defaultType)
-            putValueArgument(0, builder.irGet(context.wasmSymbols.wasmStructRefType, completionParameter.symbol))
+        val completionAnyCast = builder.irCall(context.wasmSymbols.refCastNull, type = anyType).apply {
+            putTypeArgument(0, anyType)
+            putValueArgument(0, builder.irGet(structRefType, completionParameter.symbol))
         }
         val completionInterfaceCast = IrTypeOperatorCallImpl(
             function.startOffset,
