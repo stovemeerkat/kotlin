@@ -5,119 +5,96 @@
 
 package org.jetbrains.kotlin.backend.wasm.lower
 
-import org.jetbrains.kotlin.backend.common.BodyLoweringPass
-import org.jetbrains.kotlin.backend.common.ir.Symbols
+import org.jetbrains.kotlin.backend.common.DeclarationTransformer
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
-import org.jetbrains.kotlin.backend.common.runOnFilePostfix
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.buildVariable
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.classOrFail
-import org.jetbrains.kotlin.ir.types.defaultType
+import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.getSimpleFunction
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.name.Name
 
-class SuspendCoroutineBuiltinLowering(val context: WasmBackendContext) : BodyLoweringPass {
-    override fun lower(irFile: IrFile) {
-        runOnFilePostfix(irFile, withLocalDeclarations = true)
-    }
-
-    override fun lower(irBody: IrBody, container: IrDeclaration) {
-        if (container !is IrSimpleFunction || !context.mapping.jspiFunctionsToSuspendFunctions.keys.contains(container)) {
-            return
+class SuspendCoroutineBuiltinLowering(val context: WasmBackendContext) : DeclarationTransformer {
+    override fun transformFlat(declaration: IrDeclaration): List<IrDeclaration>? {
+        if (!isSuspendCoroutineBuiltin(declaration)) {
+            return null
         }
-        val paramsLen = container.valueParameters.size
-        val continuationParam = container.valueParameters[paramsLen - 1]
-
-        irBody.transformChildrenVoid(object : IrElementTransformerVoid() {
-            override fun visitBody(body: IrBody): IrBody {
-                // Nested bodies are covered by separate `lower` invocation
-                return body
-            }
-
-            override fun visitCall(expression: IrCall): IrExpression {
-                expression.transformChildrenVoid()
-                if (!Symbols.isSuspendCoroutineIntrinsic(expression.symbol)) {
-                    return expression
-                }
-                val builder = context.createIrBuilder(container.symbol, expression.startOffset, expression.endOffset)
-                val blockCall = buildBlockCall(expression, builder, continuationParam)
-                val suspendResult = buildSuspendResultVariable(irBody, blockCall)
-                val intrinsicSymbol = continuationParam.type.classOrFail.getSimpleFunction("suspend")
-                    ?: throw RuntimeException("Continuation parameter of 'suspendCoroutineUninterceptedOrReturn' has no method 'suspend'")
-                /*val intrinsicSymbol = context.wasmSymbols.jspiCoroutineClass.getSimpleFunction("suspend")
-                    ?: throw RuntimeException("Internal class kotlin.wasm.internal.JSPICoroutine has no method 'suspend'")
-                */
-                /*val intrinsicCall = builder.irCall(context.wasmSymbols.jspiSuspendCoroutine).apply {
-                    putValueArgument(0, builder.irGet(continuationParam))
-                }*/
-                val intrinsicCall = builder.irCall(intrinsicSymbol).apply {
-                    dispatchReceiver = builder.irGet(continuationParam)
-                }
-                val ifThenElse = builder.irIfThenElse(
-                    expression.type,
-                    buildCondition(builder, suspendResult),
-                    intrinsicCall,
-                    builder.irReturn(builder.irGet(suspendResult)),
-                    IrStatementOrigin.LOWERED_SUSPEND_INTRINSIC,
-                )
-                return builder.irComposite(origin = IrStatementOrigin.LOWERED_SUSPEND_INTRINSIC) {
-                    resultType = expression.type
-                    +suspendResult
-                    +ifThenElse
-                }
-            }
-        })
+        val function = declaration as IrSimpleFunction
+        function.body = generateFunctionBody(function)
+        return null
     }
 
-    private fun buildSuspendResultVariable(irBody: IrBody, blockCall: IrCall) = buildVariable(
+    private fun isSuspendCoroutineBuiltin(declaration: IrDeclaration): Boolean =
+        declaration is IrSimpleFunction && declaration.fqNameWhenAvailable?.asString() == "kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn"
+
+    private fun generateFunctionBody(function: IrSimpleFunction): IrBody {
+        val builder = context.createIrBuilder(function.symbol, function.startOffset, function.endOffset)
+        val blockParam = function.valueParameters[0]
+        val continuationParam = function.valueParameters[1]
+        val blockCall = buildBlockCall(builder, blockParam, continuationParam)
+        val suspendResultVariable = buildSuspendResultVariable(function, blockCall)
+        val suspendMethodSymbol = continuationParam.type.classOrFail.getSimpleFunction("suspend")
+            ?: throw RuntimeException("Continuation parameter of 'suspendCoroutineUninterceptedOrReturn' has no method 'suspend'")
+        val suspendMethodCall = builder.irCall(suspendMethodSymbol).apply {
+            dispatchReceiver = builder.irGet(continuationParam)
+        }
+        val ifThenElse = builder.irIfThenElse(
+            function.returnType,
+            buildCondition(builder, suspendResultVariable),
+            suspendMethodCall,
+            builder.irGet(suspendResultVariable),
+            IrStatementOrigin.LOWERED_SUSPEND_INTRINSIC,
+        )
+        return builder.irBlockBody {
+            +suspendResultVariable
+            +builder.irReturn(ifThenElse)
+        }
+    }
+
+    private fun buildBlockCall(
+        builder: DeclarationIrBuilder,
+        blockParam: IrValueParameter,
+        continuationParam: IrValueParameter,
+    ): IrCall {
+        val invokeSymbol = blockParam.type.classOrFail.getSimpleFunction("invoke")
+            ?: throw RuntimeException("Block parameter of suspendCoroutineUninterceptedOrReturn has no 'invoke' method")
+        return builder.irCall(
+            invokeSymbol,
+            context.irBuiltIns.anyNType,
+            valueArgumentsCount = 1,
+            typeArgumentsCount = 0,
+            origin = IrStatementOrigin.LOWERED_SUSPEND_INTRINSIC,
+        ).apply {
+            dispatchReceiver = builder.irGet(blockParam)
+            putValueArgument(0, builder.irGet(continuationParam))
+        }
+    }
+
+    private fun buildSuspendResultVariable(function: IrSimpleFunction, blockCall: IrCall) = buildVariable(
         null,
-        irBody.startOffset,
-        irBody.endOffset,
+        function.startOffset,
+        function.endOffset,
         IrDeclarationOrigin.JSPI_SUSPEND_RESULT,
         Name.identifier("jspiSuspendResult"),
         context.irBuiltIns.anyNType,
-        isVar = true,
+        isVar = false,
         isConst = false,
         isLateinit = false,
     ).apply {
         initializer = blockCall
     }
 
-    private fun buildBlockCall(
-        oldIntrinsicCall: IrCall,
-        builder: DeclarationIrBuilder,
-        continuationParam: IrValueParameter,
-    ): IrCall {
-        val suspendBlock = oldIntrinsicCall.getValueArgument(0)
-            ?: throw RuntimeException("Call to suspendCoroutineUninterceptedOrReturn has no parameters")
-        val invokeSymbol = suspendBlock.type.classOrFail.getSimpleFunction("invoke")
-            ?: throw RuntimeException("Block passed to suspendCoroutineUninterceptedOrReturn has no 'invoke' method")
-        return builder.irCall(
-            invokeSymbol,
-            context.irBuiltIns.anyNType,
-            valueArgumentsCount = 1,
-            typeArgumentsCount = oldIntrinsicCall.typeArgumentsCount,
-            origin = IrStatementOrigin.LOWERED_SUSPEND_INTRINSIC,
-        ).apply {
-            dispatchReceiver = suspendBlock
-            putValueArgument(0, builder.irGet(continuationParam))
-            copyTypeArgumentsFrom(oldIntrinsicCall)
-        }
-    }
-
     private fun buildCondition(
         builder: DeclarationIrBuilder,
-        suspendResult: IrVariable,
+        suspendResultVariable: IrVariable,
     ): IrCall {
         return builder.irCall(context.irBuiltIns.eqeqeqSymbol).apply {
             origin = IrStatementOrigin.LOWERED_SUSPEND_INTRINSIC
-            putValueArgument(0, builder.irGet(suspendResult))
+            putValueArgument(0, builder.irGet(suspendResultVariable))
             putValueArgument(1, builder.irCall(context.ir.symbols.coroutineSuspendedGetter))
         }
     }

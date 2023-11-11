@@ -123,7 +123,8 @@ class JSPICoroutine<T> private constructor(private val jsObject: JSPICoroutineEx
         jspiResumeCoroutine(result, jsObject)
     }
 
-    fun suspend(): Any {
-        return wasm_ref_cast_null<Any>(jspiSuspendCoroutine(jsObject))
+    fun suspend(): T {
+        val result = wasm_ref_cast_null<Result<T>>(jspiSuspendCoroutine(jsObject))
+        return result.getOrThrow()
     }
 }
