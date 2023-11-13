@@ -21,6 +21,8 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
+import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrCompositeImpl
 import org.jetbrains.kotlin.ir.util.toIrConst
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.*
@@ -155,10 +157,20 @@ class BuiltInsLowering(val context: WasmBackendContext) : FileLoweringPass {
             }
             in symbols.startCoroutineUninterceptedOrReturnIntrinsics -> {
                 val arity = symbols.startCoroutineUninterceptedOrReturnIntrinsics.indexOf(symbol)
-                return irCall(call, context.wasmSymbols.jspiStartCoroutineIntrinsics[arity])
-//                val arity = symbols.startCoroutineUninterceptedOrReturnIntrinsics.indexOf(symbol)
-//                val newSymbol = irBuiltins.suspendFunctionN(arity).getSimpleFunction("invoke")!!
-//                return irCall(call, newSymbol, argumentsAsReceivers = true)
+                return IrCompositeImpl(
+                    call.startOffset, call.endOffset, context.irBuiltIns.anyNType, null,
+                    listOf(
+                        irCall(call, context.wasmSymbols.jspiStartCoroutineIntrinsics[arity]),
+                        IrCallImpl(
+                            call.startOffset,
+                            call.endOffset,
+                            context.irBuiltIns.anyNType,
+                            context.ir.symbols.coroutineSuspendedGetter,
+                            0,
+                            0,
+                        ),
+                    ),
+                )
             }
             symbols.reflectionSymbols.getClassData -> {
                 val type = call.getTypeArgument(0)!!
